@@ -1617,6 +1617,7 @@ function doPost(e) {
                year: 'numeric',
                month: '2-digit',
                day: '2-digit'
+           }).replace(/\//g, ''); // 會將 "2026/07/27" 轉換成 "20260727"
             
            // 6. 觸發瀏覽器下載
            XLSX.writeFile(wb, `何鑫實業_碳盤查紀錄表_${dateStr}.xlsx`);
