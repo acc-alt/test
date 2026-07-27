@@ -205,13 +205,16 @@
                         <h4 class="font-bold text-eva-darkgreen text-lg"><i class="fa-solid fa-list-check mr-2 text-eva-gold"></i>近十筆盤查紀錄摘要</h4>
                         <p class="text-xs text-slate-400">跨陸、海、油單類別的最新即時盤查明細</p>
                     </div>
-                <div>   
-                    <button onclick="refreshAllData()" class="px-4 py-2 bg-eva-green hover:bg-eva-darkgreen text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
-                        <i class="fa-solid fa-rotate mr-1"></i> 重新整理
-                    </button>
-                    <button onclick="exportToExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
-                        <i class="fa-solid fa-file-excel mr-1"></i> 匯出 Excel
-                    </button>
+                    
+                    <!-- 把兩個按鈕用 flex 容器包起來，並加上 gap-2 調整按鈕間距 -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="refreshAllData()" class="px-4 py-2 bg-eva-green hover:bg-eva-darkgreen text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
+                            <i class="fa-solid fa-rotate mr-1"></i> 重新整理
+                        </button>
+                        <button onclick="exportToExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
+                            <i class="fa-solid fa-file-excel mr-1"></i> 匯出 Excel
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="overflow-x-auto mt-4">
