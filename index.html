@@ -1568,7 +1568,25 @@ function doPost(e) {
                 alert('載入 Excel 套件失敗，請檢查網路連線');
                 return;
             }
-    
+            // --- 新增：轉換台灣時區日期的工具函數 ---
+            function formatTaiwanDate(dateVal) {
+                if (!dateVal) return '';
+                // 如果包含 'T' (如 2026-07-26T16:00:00.000Z) 或是 Date 物件，就進行轉換
+                if (dateVal instanceof Date || (typeof dateVal === 'string' && dateVal.includes('T'))) {
+                    const d = new Date(dateVal);
+                if (!isNaN(d.getTime())) {
+                    // 轉為台灣時區並格式化為 YYYY-MM-DD
+                    return d.toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Taipei',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    }).replace(/\//g, '-'); // 將 2026/07/27 改成 2026-07-27
+                }
+            }
+            return dateVal; // 如果本來就是乾淨的字串 (例如 "2026-07") 就原樣輸出
+        }
+        // ----------------------------------------
            // 如果您有寫 toast 提示功能可以呼叫，沒有的話這行會被忽略
            if(typeof showToast === 'function') showToast('正在產生 Excel 報表...');
     
@@ -1577,7 +1595,7 @@ function doPost(e) {
 
            // 3. 整理陸運、海運、油單的資料陣列 (對應您的 appState)
            const landData = appState.land.map(d => ({
-               '日期': d.date,
+               '日期':  formatTaiwanDate(d.date), // 在這裡轉換日期
                '廠商名稱': d.vendor,
                '出發點': d.start || `${d.startCounty||''}${d.startTownship||''}${d.startDetail||''}`,
                '目的地': d.end || `${d.endCounty||''}${d.endTownship||''}${d.endDetail||''}`,
@@ -1588,7 +1606,7 @@ function doPost(e) {
            }));
     
            const seaData = appState.sea.map(d => ({
-               '日期': d.date,
+               '日期':   formatTaiwanDate(d.date), // 在這裡轉換日期
                '航商/代理': d.shipper,
                '出發港': (typeof PORT_NAME_MAP !== 'undefined' && PORT_NAME_MAP[d.origin]) ? PORT_NAME_MAP[d.origin] : d.origin,
                '抵達港': (typeof PORT_NAME_MAP !== 'undefined' && PORT_NAME_MAP[d.dest]) ? PORT_NAME_MAP[d.dest] : d.dest,
@@ -1599,7 +1617,7 @@ function doPost(e) {
            }));
 
            const fleetData = appState.fleet.map(d => ({
-               '月份': d.month,
+               '月份':   formatTaiwanDate(d.month), // 在這裡轉換日期 (如果是月份格式也會處理)
                '車牌/編號': d.plate,
                '油種': d.fuelType === 'diesel' ? '柴油' : '汽油',
                '盤查公升數 (L)': d.liters,
