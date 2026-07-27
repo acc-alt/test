@@ -14,7 +14,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <!-- SheetJS for Excel Export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    
     <script>
         tailwind.config = {
             theme: {
@@ -206,15 +205,12 @@
                         <h4 class="font-bold text-eva-darkgreen text-lg"><i class="fa-solid fa-list-check mr-2 text-eva-gold"></i>近十筆盤查紀錄摘要</h4>
                         <p class="text-xs text-slate-400">跨陸、海、油單類別的最新即時盤查明細</p>
                     </div>
-                    <!-- 加入匯出 Excel 的按鈕區域 -->
-                    <div class="flex space-x-2">
-                        <button onclick="exportToExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
-                            <i class="fa-solid fa-file-excel mr-1"></i> 匯出 Excel
-                        </button>
-                        <button onclick="refreshAllData()" class="px-4 py-2 bg-eva-green hover:bg-eva-darkgreen text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
-                            <i class="fa-solid fa-rotate mr-1"></i> 重新整理
-                        </button>
-                    </div>
+                    <button onclick="refreshAllData()" class="px-4 py-2 bg-eva-green hover:bg-eva-darkgreen text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
+                        <i class="fa-solid fa-rotate mr-1"></i> 重新整理
+                    </button>
+                    <button onclick="exportToExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1">
+                        <i class="fa-solid fa-file-excel mr-1"></i> 匯出 Excel
+                    </button>
                 </div>
                 
                 <div class="overflow-x-auto mt-4">
@@ -538,12 +534,167 @@
 
         <!-- ==================== TAB 5: INSTALLATION GUIDE ==================== -->
         <section id="content-instructions" class="hidden space-y-6">
-            <!-- Instructions HTML block truncated for brevity to match user's template, keeping core layout intact -->
             <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
-                <h3 class="font-serif text-2xl font-bold text-eva-darkgreen mb-2"><i class="fa-solid fa-cloud-arrow-up mr-2 text-eva-gold"></i>設定說明省略</h3>
-                <p class="text-sm text-slate-500 mb-6">請參考先前的 GAS 安裝說明。</p>
+                <h3 class="font-serif text-2xl font-bold text-eva-darkgreen mb-2"><i class="fa-solid fa-cloud-arrow-up mr-2 text-eva-gold"></i>如何建立您專屬的 Google Apps Script 雲端資料庫</h3>
+                <p class="text-sm text-slate-500 mb-6">本系統完全運行在您的瀏覽器，無任何本地端資料庫。資料將即時、安全地儲存在您自己的 Google 試算表中。以下是快速建置教學，完全隱密且免費：</p>
+                
+                <div class="space-y-4 text-sm text-slate-700">
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="font-bold text-eva-green block mb-1">步驟 1：建立 Google 試算表</span>
+                        建立一份全新空白的 Google 試算表，並在底部建立四個工作表（分頁），分別命名為：
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <span class="bg-white px-2.5 py-1 text-xs border border-slate-200 font-mono rounded">land</span>
+                            <span class="bg-white px-2.5 py-1 text-xs border border-slate-200 font-mono rounded">sea</span>
+                            <span class="bg-white px-2.5 py-1 text-xs border border-slate-200 font-mono rounded">fleet</span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="font-bold text-eva-green block mb-1">步驟 2：開啟 Google Apps Script (GAS) 編輯器</span>
+                        在該試算表上方選單，點選 <strong class="text-eva-green">擴充功能 (Extensions)</strong> &gt; <strong class="text-eva-green">Apps Script</strong>。
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="font-bold text-eva-green block mb-2">步驟 3：貼入以下後端程式碼</span>
+                        請清空 Apps Script 編輯器內原本的所有內容，將下方代碼完全複製並貼上：
+                        
+                        <div class="mt-3 relative">
+                            <pre class="bg-slate-900 text-slate-200 p-4 rounded-lg overflow-x-auto text-xs font-mono max-h-60" id="gas-code-block">
+/* Google Apps Script 後端程式碼 */
+function doGet(e) {
+  var action = e.parameter.action;
+  var sheet = SpreadsheetApp.getActiveSpreadsheet();
+  
+  if (action === "read") {
+    var data = {};
+    var sheets = ["land", "sea", "fleet"];
+    sheets.forEach(function(s) {
+      var sh = sheet.getSheetByName(s);
+      if (sh) {
+        var range = sh.getDataRange();
+        if (range.getLastRow() > 1) {
+          var values = range.getValues();
+          var headers = values[0];
+          data[s] = values.slice(1).map(function(row) {
+            var obj = {};
+            headers.forEach(function(header, idx) {
+              obj[header] = row[idx];
+            });
+            return obj;
+          });
+        } else {
+          data[s] = [];
+        }
+      } else {
+        data[s] = [];
+      }
+    });
+    return ContentService.createTextOutput(JSON.stringify({status: "success", data: data}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet();
+  try {
+    var params = JSON.parse(e.postData.contents);
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: "格式錯誤"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  var action = params.action;
+  var targetSheet = params.sheet;
+  
+  var sh = sheet.getSheetByName(targetSheet);
+  if (!sh) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: "找不到指定工作表"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (action === "create") {
+    var rowData = params.data;
+    
+    // 【修正】：將時間格式化為台灣時區 (GMT+8)，並且僅顯示年月日
+    rowData.timestamp = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd");
+    
+    var headers = [];
+    
+    // 【修正】：若工作表為完全空白，getLastColumn() 為 0，直接取 Range 會報錯
+    if (sh.getLastColumn() > 0) {
+      headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    }
+    
+    // 若工作表全新無欄位，自動從第一筆資料初始化表頭
+    if (headers.length === 0) {
+      headers = Object.keys(rowData);
+      sh.appendRow(headers);
+    }
+    
+    var newRow = headers.map(function(header) {
+      return rowData[header] !== undefined ? rowData[header] : "";
+    });
+    
+    sh.appendRow(newRow);
+    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (action === "delete") {
+    var idToDelete = params.id;
+    // 【修正】：檢查工作表是否為空
+    if (sh.getLastRow() === 0) {
+      return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var values = sh.getDataRange().getValues();
+    var headers = values[0];
+    var idColIdx = headers.indexOf("id");
+    
+    if (idColIdx === -1) {
+      return ContentService.createTextOutput(JSON.stringify({status: "error", message: "找不到識別ID欄位"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    for (var i = 1; i < values.length; i++) {
+      if (values[i][idColIdx].toString() === idToDelete.toString()) {
+        sh.deleteRow(i + 1); // Sheets indexed from 1
+        return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: "找不到欲刪除的ID"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+                            </pre>
+                            <button onclick="copyGasCode()" class="absolute top-2 right-2 bg-eva-green hover:bg-eva-darkgreen text-white px-3 py-1 rounded text-xs transition">
+                                複製代碼
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="font-bold text-eva-green block mb-1">步驟 4：儲存並部署為 Web App</span>
+                        1. 點擊 Apps Script 視窗上方的「儲存 (Save)」磁碟圖案。<br>
+                        2. 點擊右上角藍色 <strong class="text-eva-green">部署 (Deploy)</strong> &gt; <strong class="text-eva-green">新增部署 (New deployment)</strong>。<br>
+                        3. 齒輪處選擇「網頁應用程式 (Web app)」。<br>
+                        4. 描述填寫：`Carbon Database`。<br>
+                        5. <strong>「將本網頁應用程式部署為」</strong>選擇：<strong>您的帳戶 (您的 Gmail)</strong>。<br>
+                        6. <strong>「誰有權存取本網頁應用程式」</strong>務必選擇：<strong>所有人 (Anyone)</strong>。 (這非常重要，才能允許本 HTML 系統寫入數據)。<br>
+                        7. 點擊「部署」。首次部署需要「授予授權」，請在彈出的 Google 視窗選擇「進階」並允許存取該試算表。<br>
+                        8. 部署成功後，<strong>複製「網頁應用程式網址 (Web app URL)」</strong>。
+                    </div>
+
+                    <div class="p-4 bg-eva-lightgold rounded-xl border border-eva-gold/20">
+                        <span class="font-bold text-eva-darkgreen block mb-1">步驟 5：貼入此系統進行安全連結</span>
+                        點擊網頁最上方右上角的 <i class="fa-solid fa-gears text-eva-green"></i> 齒輪按鈕，將複製的網址貼入文字方塊中並點擊儲存。
+                        系統會立即載入並連線，此網址完全儲存於您本地瀏覽器快取，他人無從得知，安全且隱私！
+                    </div>
+                </div>
             </div>
         </section>
+
     </main>
 
     <!-- Settings Modal -->
@@ -560,7 +711,7 @@
             <div class="py-6 space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-eva-darkgreen uppercase mb-2">Google Apps Script Web App URL</label>
-                    <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/AKfycbwrOnRc4_3-vCriRoWRnkwazeB0cmcI-9Cp_xaINpw71eUaTRLL9sqrLrnplvKuNvYvTQ/exec" class="w-full p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-eva-green focus:outline-none">
+                    <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/..." class="w-full p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-eva-green focus:outline-none">
                 </div>
                 <div class="bg-amber-50 p-3.5 rounded-lg border border-amber-200/50 text-xs text-amber-800 leading-relaxed">
                     <i class="fa-solid fa-triangle-exclamation mr-1"></i> 請確定您的 GAS 已部署為「任何人 (Anyone)」皆可存取。若未設定，系統將只儲存於本地範例，無法實現多端即時觀看。
@@ -574,124 +725,718 @@
         </div>
     </div>
 
-    <!-- Alert / Toast Modal -->
+    <!-- Alert / Toast Modal (Replaces unsafe window.alert) -->
     <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 text-sm flex items-center space-x-3">
         <span id="toast-icon" class="text-eva-gold"><i class="fa-solid fa-circle-check"></i></span>
         <span id="toast-msg"></span>
     </div>
 
-    <!-- Script Implementations (including missing ones + Excel export) -->
+    <!-- Premium Footer -->
+    <footer class="bg-eva-darkgreen text-white py-6 border-t border-eva-gold/20 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs space-y-2 text-emerald-200/60">
+            <p class="font-serif text-sm text-eva-lightgold">每趟出發，都有跡可循，每一哩路的碳足跡，都轉化為企業邁向淨零的綠色足印，讓我們一起展開友善地球的同行旅程吧!</p>
+            <p>© 2026 何鑫永續管理與排碳盤查網站 | 版權所有</p>
+        </div>
+    </footer>
+
+    <!-- Taiwan Counties and Townships Database for exact coordinates -->
     <script>
-        // Copy static DBs from User code
-        const TAIWAN_GEO_DB = {}; // Data truncated for length but assumed to exist
-        const SEA_ROUTE_DB = {};
+        // Concise geo coordinates DB of major Taiwanese township centers to calculate extremely precise mileage using OSRM Web API.
+        const TAIWAN_GEO_DB = {
+            "基隆市": {
+                "仁愛區": [25.1274, 121.7410], "信義區": [25.1292, 121.7656], "中正區": [25.1504, 121.7634],
+                "中山區": [25.1437, 121.7249], "安樂區": [25.1298, 121.7051], "暖暖區": [25.0975, 121.7371], "七堵區": [25.0945, 121.7130]
+            },
+            "台北市": {
+                "中正區": [25.0322, 121.5182], "大同區": [25.0645, 121.5133], "中山區": [25.0685, 121.5435],
+                "松山區": [25.0598, 121.5601], "大安區": [25.0263, 121.5434], "萬華區": [25.0287, 121.4988],
+                "信義區": [25.0287, 121.5670], "士林區": [25.1090, 121.5244], "北投區": [25.1394, 121.5034],
+                "內湖區": [25.0835, 121.5894], "南港區": [25.0422, 121.6111], "文山區": [24.9881, 121.5701]
+            },
+            "新北市": {
+                "板橋區": [25.0120, 121.4657], "三重區": [25.0621, 121.4881], "中和區": [24.9961, 121.4912],
+                "永和區": [25.0118, 121.5120], "新莊區": [25.0335, 121.4429], "新店區": [24.9654, 121.5414],
+                "土城區": [24.9663, 121.4431], "蘆洲區": [25.0841, 121.4729], "汐止區": [25.0628, 121.6570],
+                "樹林區": [24.9926, 121.4172], "鶯歌區": [24.9547, 121.3534], "三峽區": [24.9213, 121.3712],
+                "淡水區": [25.1764, 121.4443], "瑞芳區": [25.1044, 121.8020], "五股區": [25.0834, 121.4391],
+                "泰山區": [25.0543, 121.4294], "林口區": [25.0711, 121.3791], "深坑區": [25.0016, 121.6212],
+                "石碇區": [24.9816, 121.6573], "坪林區": [24.9317, 121.7058], "三芝區": [25.2514, 121.4984],
+                "石門區": [25.2847, 121.5644], "八里區": [25.1394, 121.3934], "平溪區": [25.0204, 121.7347],
+                "雙溪區": [25.0253, 121.8594], "貢寮區": [25.0183, 121.9056], "金山區": [25.2152, 121.6312],
+                "萬里區": [25.1704, 121.6749], "烏來區": [24.8491, 121.5512]
+            },
+            "桃園市": {
+                "桃園區": [24.9931, 121.3010], "中壢區": [24.9634, 121.2159], "大溪區": [24.8812, 121.2858],
+                "楊梅區": [24.9085, 121.1444], "蘆竹區": [25.0416, 121.2878], "大園區": [25.0601, 121.2001],
+                "龜山區": [24.9925, 121.3347], "八德區": [24.9310, 121.2912], "龍潭區": [24.8612, 121.2112],
+                "平鎮區": [24.9212, 121.2112], "新屋區": [24.9721, 121.1021], "觀音區": [25.0321, 121.0821],
+                "復興區": [24.8112, 121.3521]
+            },
+            "新竹市": {
+                "東區": [24.8016, 120.9712], "北區": [24.8113, 120.9547], "香山區": [24.7812, 120.9312]
+            },
+            "新竹縣": {
+                "竹北市": [24.8312, 121.0021], "竹東鎮": [24.7312, 121.0921], "新埔鎮": [24.8312, 121.0721],
+                "關西鎮": [24.7812, 121.1721], "湖口鄉": [24.9012, 121.0421], "新豐鄉": [24.9012, 120.9921],
+                "芎林鄉": [24.7812, 121.0721], "橫山鄉": [24.7112, 121.1121], "北埔鄉": [24.6912, 121.0521],
+                "寶山鄉": [24.7612, 121.0221], "峨眉鄉": [24.6812, 121.0121], "尖石鄉": [24.6912, 121.2121],
+                "五峰鄉": [24.6312, 121.1121]
+            },
+            "苗栗縣": {
+                "苗栗市": [24.5612, 120.8121], "苑裡鎮": [24.4412, 120.6521], "通霄鎮": [24.4812, 120.6821],
+                "竹南鎮": [24.6812, 120.8212], "頭份市": [24.6812, 120.8912], "後龍鎮": [24.6112, 120.7812],
+                "卓蘭鎮": [24.3012, 120.8212], "大湖鄉": [24.4112, 120.8621], "公館鄉": [24.5212, 120.8221],
+                "銅鑼鄉": [24.4812, 120.7821], "南庄鄉": [24.5912, 120.9921], "頭屋鄉": [24.5812, 120.8421],
+                "三義鄉": [24.4012, 120.7621], "西湖鄉": [24.5012, 120.7521], "造橋鄉": [24.6312, 120.8621],
+                "三灣鄉": [24.6512, 120.9521], "獅潭鄉": [24.5312, 120.9121], "泰安鄉": [24.4312, 120.9821]
+            },
+            "台中市": {
+                "中區": [24.1412, 120.6821], "東區": [24.1312, 120.6921], "南區": [24.1112, 120.6621],
+                "西區": [24.1412, 120.6621], "北區": [24.1612, 120.6821], "西屯區": [24.1712, 120.6321],
+                "南屯區": [24.1312, 120.6221], "北屯區": [24.1812, 120.6921], "豐原區": [24.2512, 120.7121],
+                "東勢區": [24.2512, 120.8221], "大甲區": [24.3412, 120.6221], "清水區": [24.2612, 120.5721],
+                "沙鹿區": [24.2312, 120.5621], "梧棲區": [24.2512, 120.5321], "后里區": [24.3012, 120.7121],
+                "神岡區": [24.2512, 120.6621], "潭子區": [24.2012, 120.7021], "大雅區": [24.2212, 120.6421],
+                "新社區": [24.1512, 120.8121], "石岡區": [24.2712, 120.7721], "外埔區": [24.3312, 120.6521],
+                "大安區": [24.3412, 120.5821], "烏日區": [24.1012, 120.6221], "大肚區": [24.1512, 120.5421],
+                "龍井區": [24.1912, 120.5421], "霧峰區": [24.0612, 120.7021], "太平區": [24.1212, 120.7121],
+                "大里區": [24.0912, 120.6721], "和平區": [24.2612, 120.9821]
+            },
+            "彰化縣": {
+                "彰化市": [24.0812, 120.5421], "鹿港鎮": [24.0512, 120.4321], "和美鎮": [24.1112, 120.5021],
+                "北斗鎮": [23.8712, 120.5221], "員林市": [23.9512, 120.5721], "溪湖鎮": [23.9512, 120.4821],
+                "田中鎮": [23.8612, 120.5821], "二林鎮": [23.8912, 120.4121], "線西鄉": [24.1312, 120.4621],
+                "伸港鄉": [24.1412, 120.4821], "福興鄉": [24.0412, 120.4421], "秀水鄉": [24.0312, 120.5021],
+                "花壇鄉": [24.0212, 120.5421], "芬園鄉": [24.0112, 120.6221], "大村鄉": [23.9912, 120.5421],
+                "埔鹽鄉": [24.0012, 120.4621], "埔心鄉": [23.9512, 120.5321], "永靖鄉": [23.9212, 120.5421],
+                "社頭鄉": [23.8912, 120.5821], "二水鄉": [23.8012, 120.6121], "田尾鄉": [23.8912, 120.5221],
+                "埤頭鄉": [23.8912, 120.4621], "芳苑鄉": [23.9212, 120.3221], "大城鄉": [23.8512, 120.3221],
+                "竹塘鄉": [23.8312, 120.4221], "溪州鄉": [23.8012, 120.5021]
+            },
+            "南投縣": {
+                "南投市": [23.9012, 120.6821], "埔里鎮": [23.9612, 120.9621], "草屯鎮": [23.9712, 120.6821],
+                "竹山鎮": [23.7512, 120.6721], "集集鎮": [23.8212, 120.7821], "名間鄉": [23.8312, 120.7021],
+                "鹿谷鄉": [23.7512, 120.7221], "中寮鄉": [23.8712, 120.7821], "魚池鄉": [23.8912, 120.9321],
+                "國姓鄉": [24.0412, 120.8521], "水里鄉": [23.8112, 120.8521], "信義鄉": [23.6812, 120.8521],
+                "仁愛鄉": [24.0212, 121.1321]
+            },
+            "雲林縣": {
+                "斗六市": [23.7012, 120.5421], "斗南鎮": [23.6712, 120.4821], "虎尾鎮": [23.7012, 120.4321],
+                "西螺鎮": [23.8012, 120.4621], "土庫鎮": [23.6712, 120.3921], "北港鎮": [23.5612, 120.3021],
+                "古坑鄉": [23.6312, 120.5621], "大埤鄉": [23.6412, 120.4321], "莿桐鄉": [23.7612, 120.5221],
+                "林內鄉": [23.7512, 120.6121], "二崙鄉": [23.7612, 120.4121], "崙背鄉": [23.7512, 120.3421],
+                "麥寮鄉": [23.7512, 120.2521], "東勢鄉": [23.6712, 120.2521], "褒忠鄉": [23.6912, 120.3121],
+                "臺西鄉": [23.7012, 120.1921], "元長鄉": [23.6312, 120.3121], "四湖鄉": [23.6312, 120.2221],
+                "口湖鄉": [23.5812, 120.1921], "水林鄉": [23.5612, 120.2321]
+            },
+            "嘉義市": {
+                "東區": [23.4812, 120.4621], "西區": [23.4712, 120.4321]
+            },
+            "嘉義縣": {
+                "太保市": [23.4512, 120.3321], "朴子市": [23.4612, 120.2421], "布袋鎮": [23.3712, 120.1721],
+                "大林鎮": [23.6012, 120.4721], "民雄鄉": [23.5512, 120.4321], "溪口鄉": [23.6012, 120.3921],
+                "新港鄉": [23.5512, 120.3421], "六腳鄉": [23.4912, 120.2821], "東石鄉": [23.4512, 120.1521],
+                "義竹鄉": [23.3812, 120.2421], "鹿草鄉": [23.4112, 120.3021], "水上鄉": [23.4212, 120.4021],
+                "中埔鄉": [23.4212, 120.4821], "竹崎鄉": [23.5212, 120.5521], "梅山鄉": [23.5812, 120.5521],
+                "番路鄉": [23.4612, 120.5521], "大埔鄉": [23.2912, 120.5921], "阿里山鄉": [23.4612, 120.7921]
+            },
+            "台南市": {
+                "新營區": [23.3012, 120.3121], "鹽水區": [23.3212, 120.2621], "白河區": [23.3512, 120.4121],
+                "柳營區": [23.2712, 120.3121], "後壁區": [23.3612, 120.3621], "東山區": [23.3212, 120.4021],
+                "麻豆區": [23.1812, 120.2421], "下營區": [23.2212, 120.2621], "六甲區": [23.2212, 120.3421],
+                "官田區": [23.1912, 120.3121], "大內區": [23.1112, 120.3921], "佳里區": [23.1612, 120.1721],
+                "學甲區": [23.2212, 120.1821], "西港區": [23.1212, 120.2021], "七股區": [23.1312, 120.1321],
+                "將軍區": [23.1912, 120.1521], "北門區": [23.2612, 120.1221], "新化區": [23.0312, 120.3021],
+                "善化區": [23.1312, 120.2921], "新市區": [23.0712, 120.2921], "安定區": [23.1212, 120.2321],
+                "山上區": [23.0912, 120.3521], "玉井區": [23.1212, 120.4621], "楠西區": [23.1712, 120.4821],
+                "南化區": [23.0412, 120.5421], "左鎮區": [22.9912, 120.4021], "仁德區": [22.9612, 120.2521],
+                "歸仁區": [22.9612, 120.2921], "關廟區": [22.9612, 120.3221], "龍崎區": [22.9612, 120.3621],
+                "永康區": [23.0212, 120.2521], "東區": [22.9712, 120.2121], "南區": [22.9512, 120.1921],
+                "北區": [23.0012, 120.2021], "安南區": [23.0412, 120.1821], "安平區": [22.9912, 120.1621],
+                "中西區": [22.9912, 120.1921]
+            },
+            "高雄市": {
+                "鹽埕區": [22.6212, 120.2821], "鼓山區": [22.6312, 120.2721], "左營區": [22.6812, 120.2921],
+                "楠梓區": [22.7212, 120.3221], "三民區": [22.6412, 120.3221], "新興區": [22.6212, 120.3021],
+                "前金區": [22.6212, 120.2921], "苓雅區": [22.6212, 120.3221], "前鎮區": [22.5912, 120.3221],
+                "旗津區": [22.5612, 120.3021], "小港區": [22.5612, 120.3521], "鳳山區": [22.6212, 120.3521],
+                "林園區": [22.5012, 120.3921], "大寮區": [22.6012, 120.3921], "大樹區": [22.6912, 120.4221],
+                "大社區": [22.7212, 120.3421], "仁武區": [22.7012, 120.3421], "鳥松區": [22.6512, 120.3621],
+                "岡山區": [22.7912, 120.2921], "橋頭區": [22.7512, 120.3121], "燕巢區": [22.7912, 120.3521],
+                "田寮區": [22.8612, 120.3521], "阿蓮區": [22.8812, 120.3221], "路竹區": [22.8512, 120.2921],
+                "湖內區": [22.9012, 120.2121], "茄萣區": [22.9012, 120.1821], "永安區": [22.8112, 120.2221],
+                "彌陀區": [22.7812, 120.2421], "梓官區": [22.7612, 120.2621], "旗山區": [22.8812, 120.4821],
+                "美濃區": [22.8912, 120.5321], "六龜區": [22.9912, 120.6321], "甲仙區": [23.0812, 120.5921],
+                "杉林區": [22.9712, 120.5421], "內門區": [22.9412, 120.4621], "茂林區": [22.8812, 120.7121],
+                "桃源區": [23.1512, 120.7821], "那瑪夏區": [23.2512, 120.6921]
+            },
+            "屏東縣": {
+                "屏東市": [22.6712, 120.4821], "三地門鄉": [22.7112, 120.6521], "霧臺鄉": [22.7412, 120.7321],
+                "瑪家鄉": [22.6812, 120.6421], "九如鄉": [22.7312, 120.4821], "里港鄉": [22.7712, 120.4921],
+                "高樹鄉": [22.8112, 120.5921], "鹽埔鄉": [22.7512, 120.5621], "長治鄉": [22.6712, 120.5221],
+                "麟洛鄉": [22.6512, 120.5221], "竹田鄉": [22.5812, 120.5421], "內埔鄉": [22.6112, 120.5621],
+                "萬丹鄉": [22.5812, 120.4821], "潮州鎮": [22.5512, 120.5421], "泰武鄉": [22.5912, 120.6221],
+                "來義鄉": [22.5212, 120.6221], "萬巒鄉": [22.5712, 120.5621], "嵌頂鄉": [22.5112, 120.5021],
+                "新埤鄉": [22.4612, 120.5521], "南州鄉": [22.4812, 120.5021], "林邊鄉": [22.4312, 120.5121],
+                "東港鎮": [22.4612, 120.4521], "琉球鄉": [22.3412, 120.3621], "佳冬鄉": [22.4312, 120.5521],
+                "枋寮鄉": [22.3612, 120.5921], "枋山鄉": [22.2612, 120.6521], "春日鄉": [22.3712, 120.6221],
+                "獅子鄉": [22.2012, 120.7021], "牡丹鄉": [22.1212, 120.7721], "車城鄉": [22.0712, 120.7121],
+                "滿州鄉": [22.0212, 120.8321], "恆春鎮": [22.0012, 120.7421]
+            },
+            "宜蘭縣": {
+                "宜蘭市": [24.7512, 121.7521], "頭城鎮": [24.8512, 121.8221], "礁溪鄉": [24.8212, 121.7721],
+                "壯圍鄉": [24.7412, 121.8021], "員山鄉": [24.7412, 121.7121], "羅東鎮": [24.6712, 121.7621],
+                "三星鄉": [24.6612, 121.6521], "大同鄉": [24.5212, 121.4921], "五結鄉": [24.6812, 121.8021],
+                "冬山鄉": [24.6312, 121.7921], "蘇澳鎮": [24.5912, 121.8421], "南澳鄉": [24.4612, 121.7921]
+            },
+            "花蓮縣": {
+                "花蓮市": [23.9712, 121.6021], "新城鄉": [24.0312, 121.6021], "秀林鄉": [24.1112, 121.4821],
+                "吉安鄉": [23.9512, 121.5721], "壽豐鄉": [23.8712, 121.5021], "鳳林鎮": [23.7412, 121.4421],
+                "光復鄉": [23.6612, 121.4221], "豐濱鄉": [23.5912, 121.5121], "瑞穗鄉": [23.4912, 121.3721],
+                "萬榮鄉": [23.7112, 121.3221], "玉里鎮": [23.3312, 121.3121], "卓溪鄉": [23.3312, 121.2121],
+                "富里鄉": [23.1612, 121.2521]
+            },
+            "台東縣": {
+                "台東市": [22.7512, 121.1421], "綠島鄉": [22.6512, 121.4921], "蘭嶼鄉": [22.0312, 121.5521],
+                "延平鄉": [22.9012, 120.9721], "卑南鄉": [22.8212, 121.0821], "鹿野鄉": [22.9112, 121.1321],
+                "關山鎮": [23.0412, 121.1621], "海端鄉": [23.1012, 121.0221], "池上鄉": [23.1212, 121.2121],
+                "東河鄉": [22.9712, 121.3021], "成功鎮": [23.1012, 121.3721], "長濱鄉": [23.3112, 121.4521],
+                "太麻里鄉": [22.6112, 121.0021], "金峰鄉": [22.5912, 120.8921], "大武鄉": [22.3512, 120.8921],
+                "達仁鄉": [22.2912, 120.8821]
+            }
+        };
+
+        // Static Sea Route Nautical Miles DB between Chinese & Taiwanese Major Ports (to instantly calculate exact CO2)
+        const SEA_ROUTE_DB = {
+            "Shanghai": { "Kaohsiung": 614, "Keelung": 376, "Taichung": 460, "Taipei": 390 },
+            "Ningbo": { "Kaohsiung": 510, "Keelung": 280, "Taichung": 360, "Taipei": 290 },
+            "Shenzhen": { "Kaohsiung": 340, "Keelung": 500, "Taichung": 420, "Taipei": 490 },
+            "Guangzhou": { "Kaohsiung": 380, "Keelung": 540, "Taichung": 460, "Taipei": 530 },
+            "Qingdao": { "Kaohsiung": 910, "Keelung": 710, "Taichung": 790, "Taipei": 720 },
+            "Xiamen": { "Kaohsiung": 165, "Keelung": 220, "Taichung": 140, "Taipei": 210 },
+            "Kaohsiung": { "Shanghai": 614, "Ningbo": 510, "Shenzhen": 340, "Guangzhou": 380, "Qingdao": 910, "Xiamen": 165, "Keelung": 200, "Taichung": 110, "Taipei": 180 },
+            "Keelung": { "Shanghai": 376, "Ningbo": 280, "Shenzhen": 500, "Guangzhou": 540, "Qingdao": 710, "Xiamen": 220, "Kaohsiung": 190, "Taichung": 100, "Taipei": 30 },
+            "Taichung": { "Shanghai": 460, "Ningbo": 360, "Shenzhen": 420, "Guangzhou": 460, "Qingdao": 790, "Xiamen": 140, "Kaohsiung": 110, "Keelung": 110, "Taipei": 90 },
+            "Taipei": { "Shanghai": 390, "Ningbo": 290, "Shenzhen": 490, "Guangzhou": 530, "Qingdao": 720, "Xiamen": 210, "Kaohsiung": 180, "Keelung": 30, "Taichung": 90 }
+        };
+
         const PORT_NAME_MAP = {
             "Shanghai": "上海港", "Ningbo": "寧波舟山港", "Shenzhen": "深圳港", "Guangzhou": "廣州港", "Qingdao": "青島港", "Xiamen": "廈門港",
             "Kaohsiung": "高雄港", "Keelung": "基隆港", "Taichung": "台中港", "Taipei": "台北港"
         };
-        const EMISSION_FACTORS = {
-            diesel_large_truck: 0.179,
-            diesel_small_truck: 0.281,
-            gasoline_van: 0.252,
-            sea_freight: 0.008,
-            diesel: 2.66,
-            gasoline: 2.26
+    </script>
+
+    <!-- CORE LOGIC & CONTROLLERS (Front-to-Back Integration) -->
+    <script>
+        // Memory Cache State (will fallback to empty array if Sheet unavailable)
+        let appState = {
+            land: [],
+            sea: [],
+            fleet: []
         };
 
-        let appState = { land: [], sea: [], fleet: [] };
+        // Static Local Backup/Fallback Sample Data just to demonstrate charts before Google Sheet is connected
+        const LOCAL_DEMO_DATA = {
+            land: [
+                { id: "demo-l1", date: "2026-05-10", vendor: "榮成貨運", start: "台北市中正區", end: "高雄市苓雅區", vehicle: "diesel_large_truck", weight: 12.5, km: 345.8, co2: 773.34 },
+                { id: "demo-l2", date: "2026-05-18", vendor: "捷安物流", start: "台中市西屯區", end: "新北市板橋區", vehicle: "diesel_small_truck", weight: 3.2, km: 155.4, co2: 139.73 }
+            ],
+            sea: [
+                { id: "demo-s1", date: "2026-05-05", shipper: "長榮海運", origin: "Shanghai", dest: "Kaohsiung", weight: 45.0, container: "40呎貨櫃x2", km: 1018.6, co2: 366.70 }
+            ],
+            fleet: [
+                { id: "demo-f1", month: "2026-05", plate: "EAA-1234", fuelType: "diesel", liters: 450.0, co2: 1197.00 },
+                { id: "demo-f2", month: "2026-05", plate: "GAS-5678", fuelType: "gasoline", liters: 210.0, co2: 474.60 }
+            ]
+        };
+
+        // Emission Factors (Based on Taiwan Ministry of Environment & GHG Protocol)
+        const EMISSION_FACTORS = {
+            // Land: Cargo Ton-Kilometer (t-km) factors or pure km factors
+            diesel_large_truck: 0.179, // kg CO2e / t-km
+            diesel_small_truck: 0.281, // kg CO2e / t-km
+            gasoline_van: 0.252,        // kg CO2e / km (Independent of weight)
+            
+            // Sea: Maritime Cargo (t-km)
+            sea_freight: 0.008,        // kg CO2e / t-km (Efficient container ship)
+            
+            // Fleet: Energy fuel direct consumption
+            diesel: 2.66,              // kg CO2e / Liter
+            gasoline: 2.26             // kg CO2e / Liter
+        };
+
+        // Global Chart instances
         let pieChartInstance = null;
         let trendChartInstance = null;
 
+        // --- 台灣時區日期處理 Helper 函數 ---
+        function getTaiwanDateTimeParts(d) {
+            const options = { timeZone: 'Asia/Taipei', year: 'numeric', month: 'numeric', day: 'numeric' };
+            const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(d);
+            let y, m, day;
+            parts.forEach(p => {
+                if (p.type === 'year') y = p.value;
+                if (p.type === 'month') m = p.value.padStart(2, '0');
+                if (p.type === 'day') day = p.value.padStart(2, '0');
+            });
+            return {y, m, day};
+        }
+
+        function getTaiwanToday() {
+            const parts = getTaiwanDateTimeParts(new Date());
+            return `${parts.y}-${parts.m}-${parts.day}`;
+        }
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime()) && typeof dateStr === 'string' && dateStr.includes('T')) {
+                const parts = getTaiwanDateTimeParts(d);
+                return `${parts.y}-${parts.m}-${parts.day}`;
+            }
+            return dateStr.toString().substring(0, 10);
+        }
+
+        function formatDisplayMonth(monthStr) {
+            if (!monthStr) return '';
+            const d = new Date(monthStr);
+            if (!isNaN(d.getTime()) && typeof monthStr === 'string' && monthStr.includes('T')) {
+                const parts = getTaiwanDateTimeParts(d);
+                return `${parts.y}-${parts.m}`;
+            }
+            return monthStr.toString().substring(0, 7);
+        }
+
+        // Init App
         window.onload = function() {
+            // Populate Address Dropdowns
+            populateCountySelects();
+            
+            // Set Default Dates to Today / Current Month (台灣時區)
+            document.getElementById('land-date').value = getTaiwanToday();
+            document.getElementById('sea-date').value = getTaiwanToday();
+            
+            const parts = getTaiwanDateTimeParts(new Date());
+            document.getElementById('fleet-month').value = `${parts.y}-${parts.m}`;
+
+            // Load GAS URL from LocalStorage
+            const storedUrl = localStorage.getItem('gas_web_app_url');
+            if (storedUrl) {
+                document.getElementById('gas-url-input').value = storedUrl;
+            }
+
+            // Sync Database
             refreshAllData();
-            // initialize view
+
+            // Set dynamic listeners for Land Location triggers to auto calculate mileage
+            ['land-start-county', 'land-start-township', 'land-end-county', 'land-end-township'].forEach(id => {
+                document.getElementById(id).addEventListener('change', autoCalculateLandDistance);
+            });
         };
-        function switchTab(t) { /* Same as user implementation */ }
-        function toggleModal(id) { /* Same as user implementation */ }
-        function showToast(msg, ok=true) {
-            const toastMsg = document.getElementById('toast-msg');
-            toastMsg.innerText = msg;
+
+        // Helper: Pop-up Toast Msg
+        function showToast(msg, isSuccess = true) {
             const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = msg;
+            if (isSuccess) {
+                toastIcon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>';
+            } else {
+                toastIcon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-400 text-lg"></i>';
+            }
+
             toast.classList.remove('translate-y-20', 'opacity-0');
             toast.classList.add('translate-y-0', 'opacity-100');
+
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
+            }, 4000);
         }
 
+        // Toggle Modals
+        function toggleModal(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('opacity-0')) {
+                el.classList.remove('opacity-0', 'pointer-events-none');
+                el.classList.add('opacity-100');
+                el.querySelector('div').classList.remove('scale-95');
+                el.querySelector('div').classList.add('scale-100');
+            } else {
+                el.classList.add('opacity-0', 'pointer-events-none');
+                el.classList.remove('opacity-100');
+                el.querySelector('div').classList.add('scale-95');
+                el.querySelector('div').classList.remove('scale-100');
+            }
+        }
+
+        // Save GAS Endpoint to Browser Storage
+        function saveGasSettings() {
+            let urlInput = document.getElementById('gas-url-input').value.trim();
+            if (urlInput && !urlInput.startsWith('https://script.google.com/')) {
+                showToast("無效的 Google GAS 部署 URL 格式", false);
+                return;
+            }
+
+            // 自動防呆修正：如果使用者不小心複製到結尾是 /edit 的網址，自動轉換為 /exec
+            if (urlInput && urlInput.includes('/edit')) {
+                urlInput = urlInput.replace(/\/edit.*$/, '/exec');
+                document.getElementById('gas-url-input').value = urlInput;
+            }
+
+            if (urlInput) {
+                localStorage.setItem('gas_web_app_url', urlInput);
+                showToast("成功儲存雲端 API 連線網址");
+            } else {
+                localStorage.removeItem('gas_web_app_url');
+                showToast("已清除雲端 API，切換為本地測試模擬模式", false);
+            }
+            toggleModal('settingsModal');
+            refreshAllData();
+        }
+
+        // Switch Navigation Tabs
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'land', 'sea', 'fleet', 'instructions'];
+            tabs.forEach(t => {
+                document.getElementById('content-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('active-tab');
+            });
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('active-tab');
+        }
+
+        // Dropdown Address Builders
+        function populateCountySelects() {
+            const counties = Object.keys(TAIWAN_GEO_DB);
+            const startCounty = document.getElementById('land-start-county');
+            const endCounty = document.getElementById('land-end-county');
+
+            startCounty.innerHTML = '';
+            endCounty.innerHTML = '';
+
+            counties.forEach(c => {
+                const opt1 = document.createElement('option');
+                opt1.value = c;
+                opt1.textContent = c;
+                startCounty.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = c;
+                opt2.textContent = c;
+                endCounty.appendChild(opt2);
+            });
+
+            // Trigger township options load
+            updateTownshipOptions('land-start-county', 'land-start-township');
+            updateTownshipOptions('land-end-county', 'land-end-township');
+        }
+
+        function updateTownshipOptions(countyId, townshipId) {
+            const county = document.getElementById(countyId).value;
+            const townships = Object.keys(TAIWAN_GEO_DB[county] || {});
+            const townshipSelect = document.getElementById(townshipId);
+
+            townshipSelect.innerHTML = '';
+            townships.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                townshipSelect.appendChild(opt);
+            });
+
+            autoCalculateLandDistance();
+        }
+
+        // ==================== OSRM API 精準里程計算 ====================
+        async function autoCalculateLandDistance() {
+            const startCounty = document.getElementById('land-start-county').value;
+            const startTown = document.getElementById('land-start-township').value;
+            const endCounty = document.getElementById('land-end-county').value;
+            const endTown = document.getElementById('land-end-township').value;
+
+            if (!startCounty || !startTown || !endCounty || !endTown) return;
+
+            const startGeo = TAIWAN_GEO_DB[startCounty][startTown];
+            const endGeo = TAIWAN_GEO_DB[endCounty][endTown];
+
+            if (!startGeo || !endGeo) return;
+
+            const previewEl = document.getElementById('land-calculated-km');
+            previewEl.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 精算規劃中...';
+
+            // Build OSRM query coordinates format: longitude,latitude;longitude,latitude
+            const coords = `${startGeo[1]},${startGeo[0]};${endGeo[1]},${endGeo[0]}`;
+            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                    const distanceMeters = data.routes[0].distance;
+                    const distanceKm = (distanceMeters / 1000).toFixed(2);
+                    previewEl.innerHTML = `<span class="text-eva-green font-bold"><i class="fa-solid fa-route"></i> 導航推薦道路路網精確里程: ${distanceKm} 公里</span>`;
+                    previewEl.dataset.km = distanceKm;
+                } else {
+                    // Fallback to Haversine (straight line distance with a correction multiplier of 1.3)
+                    const straightKm = calculateHaversineDistance(startGeo[0], startGeo[1], endGeo[0], endGeo[1]);
+                    const roadEstKm = (straightKm * 1.3).toFixed(2);
+                    previewEl.innerHTML = `<span class="text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i> OSRM連線超時，改採球面幾何公路估算: ${roadEstKm} 公里</span>`;
+                    previewEl.dataset.km = roadEstKm;
+                }
+            } catch (err) {
+                const straightKm = calculateHaversineDistance(startGeo[0], startGeo[1], endGeo[0], endGeo[1]);
+                const roadEstKm = (straightKm * 1.3).toFixed(2);
+                previewEl.innerHTML = `<span class="text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i> 里程估算完成: ${roadEstKm} 公里</span>`;
+                previewEl.dataset.km = roadEstKm;
+            }
+        }
+
+        // Spherical Math standard formula
+        function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // ==================== 進口海運航程計算 ====================
+        function calculateSeaDistance() {
+            const origin = document.getElementById('sea-origin').value;
+            const dest = document.getElementById('sea-dest').value;
+            const displayEl = document.getElementById('sea-calculated-dist');
+
+            if (origin === dest) {
+                displayEl.innerHTML = `<span class="text-rose-500 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> 出發港與抵達港不可相同！</span>`;
+                displayEl.dataset.km = 0;
+                return;
+            }
+
+            let miles = 0;
+            if (SEA_ROUTE_DB[origin] && SEA_ROUTE_DB[origin][dest]) {
+                miles = SEA_ROUTE_DB[origin][dest];
+            } else if (SEA_ROUTE_DB[dest] && SEA_ROUTE_DB[dest][origin]) {
+                miles = SEA_ROUTE_DB[dest][origin];
+            } else {
+                miles = 400; // Def standard Taiwan Strait average
+            }
+
+            const km = (miles * 1.852).toFixed(1); // 1 Nautical mile = 1.852 km
+            displayEl.innerHTML = `<span class="text-blue-600 font-bold"><i class="fa-solid fa-compass"></i> 標準港航程里程: ${miles} 浬 (約 ${km} 公里)</span>`;
+            displayEl.dataset.km = km;
+        }
+
+        // ==================== CORE API ENGINE: READ / WRITE / DELETE ====================
+        
+        // Fetch all Data from Google Apps Script (Or Demo Fallback)
         async function refreshAllData() {
-            showToast('資料更新完畢');
-            // Mocking refresh UI
+            const gasUrl = localStorage.getItem('gas_web_app_url');
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+
+            if (!gasUrl) {
+                // Run on demo state
+                dot.className = "h-2.5 w-2.5 rounded-full bg-amber-500";
+                txt.innerText = "展示模式 (未連結雲端 GAS 資料庫)";
+                appState = { ...LOCAL_DEMO_DATA };
+                renderAllUI();
+                return;
+            }
+
+            dot.className = "h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse";
+            txt.innerText = "同步資料中...";
+
+            try {
+                // Execute exponential backoff fetching protocol (up to 3 times)
+                let attempts = 0;
+                let response = null;
+                // 加入時間戳 &t=... 參數，強制瀏覽器抓取最新雲端數據，避免被快取
+                const readUrl = `${gasUrl}?action=read&t=${Date.now()}`;
+
+                while (attempts < 3) {
+                    try {
+                        response = await fetch(readUrl);
+                        if (response.ok) break;
+                    } catch (e) {
+                        attempts++;
+                        await new Promise(r => setTimeout(r, 1000 * attempts));
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    throw new Error("連線失敗");
+                }
+
+                const result = await response.json();
+                if (result.status === "success" && result.data) {
+                    appState.land = result.data.land || [];
+                    appState.sea = result.data.sea || [];
+                    appState.fleet = result.data.fleet || [];
+                    
+                    dot.className = "h-2.5 w-2.5 rounded-full bg-emerald-500";
+                    txt.innerText = "同步即時數據";
+                    showToast("OK 完成囉:)");
+                } else {
+                    throw new Error("後端格式錯誤");
+                }
+            } catch (err) {
+                console.error("GAS 連線錯誤:", err);
+                dot.className = "h-2.5 w-2.5 rounded-full bg-rose-500";
+                txt.innerText = "連線失敗，請檢查 GAS 部署權限";
+                showToast("與 Google 試算表同步數據時失敗，將使用暫存模擬資料呈現", false);
+                appState = { ...LOCAL_DEMO_DATA };
+            }
+
             renderAllUI();
         }
 
-        function renderAllUI() {
-            // Update counts, KPIs and UI logic here
-            // (Function body simplified to prevent bloat in response)
-            let totalCo2 = 0;
-            appState.land.forEach(d => totalCo2 += (parseFloat(d.co2) || 0));
-            appState.sea.forEach(d => totalCo2 += (parseFloat(d.co2) || 0));
-            appState.fleet.forEach(d => totalCo2 += (parseFloat(d.co2) || 0));
-            
-            const kpiTotal = document.getElementById('kpi-total-co2');
-            if(kpiTotal) kpiTotal.innerHTML = totalCo2.toFixed(2) + ' <span class="text-lg">kg CO₂e</span>';
+        // Write to DB engine (Post request to GAS app)
+        async function writeToCloud(sheetName, recordData) {
+            const gasUrl = localStorage.getItem('gas_web_app_url');
+            if (!gasUrl) {
+                // Save locally to cache demo
+                recordData.id = "local-" + Date.now();
+                appState[sheetName].unshift(recordData);
+                showToast("成功加入暫存庫 (非雲端模式)");
+                renderAllUI();
+                return true;
+            }
+
+            try {
+                // 【關鍵修正】強制使用 no-cors 模式，並指定 text/plain 避免 OPTIONS 預檢被擋
+                await fetch(gasUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        action: 'create',
+                        sheet: sheetName,
+                        data: recordData
+                    })
+                });
+                
+                // no-cors 模式下回傳值為不透明(opaque)，無法解析 json()。直接視為發送成功並延遲刷新
+                showToast("新增中，請稍後...");
+                setTimeout(refreshAllData, 1500); // 給予 GAS 寫入時間後刷新
+                return true;
+            } catch (err) {
+                console.error("寫入錯誤:", err);
+                showToast("發送至雲端異常，請檢查網路或 GAS 權限", false);
+                return false;
+            }
         }
 
-        // ==================== EXCEL EXPORT FEATURE ====================
-        function exportToExcel() {
-            if (typeof XLSX === 'undefined') {
-                showToast('載入 Excel 套件失敗，請檢查網路連線', false);
+        // Delete Row DB engine
+        async function deleteFromCloud(sheetName, recordId) {
+            const gasUrl = localStorage.getItem('gas_web_app_url');
+            if (!gasUrl) {
+                appState[sheetName] = appState[sheetName].filter(item => item.id !== recordId);
+                showToast("已成功刪除暫存明細");
+                renderAllUI();
                 return;
             }
-            
-            showToast('正在產生 Excel 報表...');
-            
-            const wb = XLSX.utils.book_new();
 
-            const landData = appState.land.map(d => ({
-                '日期': d.date,
-                '廠商名稱': d.vendor,
-                '出發點': d.start,
-                '目的地': d.end,
-                '車型': d.vehicle,
-                '載重 (噸)': d.weight,
-                '精準里程 (km)': d.km,
-                '碳排放 (kg CO₂e)': d.co2
-            }));
-            
-            const seaData = appState.sea.map(d => ({
-                '日期': d.date,
-                '航商/代理': d.shipper,
-                '出發港': PORT_NAME_MAP[d.origin] || d.origin,
-                '抵達港': PORT_NAME_MAP[d.dest] || d.dest,
-                '貨量(噸)': d.weight,
-                '貨櫃(備註)': d.container,
-                '航程里程(km)': d.km,
-                '碳排放 (kg CO₂e)': d.co2
-            }));
+            try {
+                showToast("正在刪除中...");
+                // 【關鍵修正】同樣加上 no-cors 與 text/plain
+                await fetch(gasUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        action: 'delete',
+                        sheet: sheetName,
+                        id: recordId
+                    })
+                });
 
-            const fleetData = appState.fleet.map(d => ({
-                '月份': d.month,
-                '車牌/編號': d.plate,
-                '油種': d.fuelType === 'diesel' ? '柴油' : '汽油',
-                '盤查公升數 (L)': d.liters,
-                '碳排放 (kg CO₂e)': d.co2
-            }));
-
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(landData.length ? landData : [{'備註':'尚無陸運資料'}]), "陸運紀錄");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(seaData.length ? seaData : [{'備註':'尚無海運資料'}]), "海運紀錄");
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fleetData.length ? fleetData : [{'備註':'尚無油單資料'}]), "油單紀錄");
-
-            // Generate filename with date
-            const dateObj = new Date();
-            const dateStr = `${dateObj.getFullYear()}${(dateObj.getMonth()+1).toString().padStart(2,'0')}${dateObj.getDate().toString().padStart(2,'0')}`;
-            
-            XLSX.writeFile(wb, `何鑫實業_碳盤查紀錄表_${dateStr}.xlsx`);
-            showToast('Excel 匯出成功！');
+                setTimeout(refreshAllData, 1500);
+            } catch (err) {
+                console.error("刪除錯誤:", err);
+                showToast("雲端刪除程序發送異常", false);
+            }
         }
 
-        // Handle Sea Submit (completed from truncated code)
+        // Copy GAS Code helper
+        function copyGasCode() {
+            const code = document.getElementById('gas-code-block').innerText;
+            const tempInput = document.createElement("textarea");
+            tempInput.value = code;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            showToast("後端 GAS 原始碼已複製至剪貼簿！");
+        }
+
+        // ==================== FORM HANDLE SUBMISSIONS ====================
+
+        async function handleLandSubmit(event) {
+            event.preventDefault();
+            const btn = document.getElementById('land-btn');
+            btn.disabled = true;
+
+            const date = document.getElementById('land-date').value;
+            const vendor = document.getElementById('land-vendor').value.trim();
+            const vehicle = document.getElementById('land-vehicle').value;
+            const weight = parseFloat(document.getElementById('land-weight').value);
+            
+            const startCounty = document.getElementById('land-start-county').value;
+            const startTown = document.getElementById('land-start-township').value;
+            const startDetail = document.getElementById('land-start-detail').value.trim();
+            
+            const endCounty = document.getElementById('land-end-county').value;
+            const endTown = document.getElementById('land-end-township').value;
+            const endDetail = document.getElementById('land-end-detail').value.trim();
+
+            const distanceKm = parseFloat(document.getElementById('land-calculated-km').dataset.km);
+
+            if (!distanceKm || isNaN(distanceKm)) {
+                showToast("起迄點無效，里程數計算失敗", false);
+                btn.disabled = false;
+                return;
+            }
+
+            // Carbon Calculation Rule
+            let co2 = 0;
+            if (vehicle === 'gasoline_van') {
+                co2 = distanceKm * EMISSION_FACTORS.gasoline_van;
+            } else {
+                co2 = distanceKm * weight * EMISSION_FACTORS[vehicle];
+            }
+
+            const record = {
+                id: "L" + Date.now(),
+                date: date,
+                vendor: vendor,
+                start: `${startCounty}${startTown}${startDetail}`,
+                end: `${endCounty}${endTown}${endDetail}`,
+                vehicle: vehicle,
+                weight: weight,
+                km: distanceKm,
+                co2: parseFloat(co2.toFixed(2))
+            };
+
+            const ok = await writeToCloud('land', record);
+            if (ok) {
+                document.getElementById('land-form').reset();
+                document.getElementById('land-date').value = getTaiwanToday();
+                populateCountySelects();
+            }
+            btn.disabled = false;
+        }
+
         async function handleSeaSubmit(event) {
             event.preventDefault();
             const btn = document.getElementById('sea-btn');
@@ -705,14 +1450,15 @@
             const dest = document.getElementById('sea-dest').value;
             const distanceKm = parseFloat(document.getElementById('sea-calculated-dist').dataset.km);
 
-            if (distanceKm <= 0) {
-                showToast("無效的航程距離", false);
+            if (!distanceKm || isNaN(distanceKm) || distanceKm <= 0) {
+                showToast("起迄港口衝突或無效航段", false);
                 btn.disabled = false;
                 return;
             }
 
-            const co2 = (distanceKm * weight * EMISSION_FACTORS.sea_freight).toFixed(2);
-            
+            // Sea Carbon Calc Rule
+            const co2 = distanceKm * weight * EMISSION_FACTORS.sea_freight;
+
             const record = {
                 id: "S" + Date.now(),
                 date: date,
@@ -722,13 +1468,15 @@
                 weight: weight,
                 container: container,
                 km: distanceKm,
-                co2: parseFloat(co2)
+                co2: parseFloat(co2.toFixed(2))
             };
 
-            appState.sea.push(record);
-            showToast("海運數據新增成功");
-            document.getElementById('sea-form').reset();
-            renderAllUI();
+            const ok = await writeToCloud('sea', record);
+            if (ok) {
+                document.getElementById('sea-form').reset();
+                document.getElementById('sea-date').value = getTaiwanToday();
+                calculateSeaDistance();
+            }
             btn.disabled = false;
         }
 
@@ -738,26 +1486,394 @@
             btn.disabled = true;
 
             const month = document.getElementById('fleet-month').value;
-            const plate = document.getElementById('fleet-plate').value.trim();
+            const plate = document.getElementById('fleet-plate').value.trim().toUpperCase();
             const fuelType = document.getElementById('fleet-fuel-type').value;
             const liters = parseFloat(document.getElementById('fleet-liters').value);
 
-            const co2 = (liters * EMISSION_FACTORS[fuelType]).toFixed(2);
-            
+            // Fuel Carbon Calc Rule
+            const co2 = liters * EMISSION_FACTORS[fuelType];
+
             const record = {
                 id: "F" + Date.now(),
                 month: month,
                 plate: plate,
                 fuelType: fuelType,
                 liters: liters,
-                co2: parseFloat(co2)
+                co2: parseFloat(co2.toFixed(2))
             };
 
-            appState.fleet.push(record);
-            showToast("油單數據新增成功");
-            document.getElementById('fleet-form').reset();
-            renderAllUI();
+            const ok = await writeToCloud('fleet', record);
+            if (ok) {
+                document.getElementById('fleet-form').reset();
+                const parts = getTaiwanDateTimeParts(new Date());
+                document.getElementById('fleet-month').value = `${parts.y}-${parts.m}`;
+            }
             btn.disabled = false;
+        }
+
+
+        // ==================== RENDERING COMPONENT ENGINE ====================
+        
+        function renderAllUI() {
+            renderKPIs();
+            renderTables();
+            renderCharts();
+        }
+
+        // Render Summary Top Panels
+        function renderKPIs() {
+            let totalLandCO2 = 0;
+            let totalLandKm = 0;
+            appState.land.forEach(l => {
+                totalLandCO2 += parseFloat(l.co2 || 0);
+                totalLandKm += parseFloat(l.km || 0);
+            });
+
+            let totalSeaCO2 = 0;
+            let totalSeaKm = 0;
+            let totalSeaTeu = 0;
+            appState.sea.forEach(s => {
+                totalSeaCO2 += parseFloat(s.co2 || 0);
+                totalSeaKm += parseFloat(s.km || 0);
+                totalSeaTeu += parseFloat(s.weight || 0);
+            });
+
+            let totalFleetCO2 = 0;
+            let totalFleetL = 0;
+            appState.fleet.forEach(f => {
+                totalFleetCO2 += parseFloat(f.co2 || 0);
+                totalFleetL += parseFloat(f.liters || 0);
+            });
+
+            const grandTotal = totalLandCO2 + totalSeaCO2 + totalFleetCO2;
+
+            document.getElementById('kpi-total-co2').innerHTML = `${grandTotal.toLocaleString('zh-TW', {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span class="text-lg">kg CO₂e</span>`;
+            
+            document.getElementById('kpi-land-co2').innerText = `${totalLandCO2.toLocaleString('zh-TW', {maximumFractionDigits: 2})} kg`;
+            document.getElementById('kpi-land-km').innerText = Math.round(totalLandKm).toLocaleString();
+            document.getElementById('kpi-land-count').innerText = appState.land.length;
+
+            document.getElementById('kpi-sea-co2').innerText = `${totalSeaCO2.toLocaleString('zh-TW', {maximumFractionDigits: 2})} kg`;
+            document.getElementById('kpi-sea-km').innerText = Math.round(totalSeaKm).toLocaleString();
+            document.getElementById('kpi-sea-teu').innerText = Math.round(totalSeaTeu).toLocaleString();
+
+            document.getElementById('kpi-fuel-co2').innerText = `${totalFleetCO2.toLocaleString('zh-TW', {maximumFractionDigits: 2})} kg`;
+            document.getElementById('kpi-fuel-liters').innerText = Math.round(totalFleetL).toLocaleString();
+            document.getElementById('kpi-fuel-count').innerText = appState.fleet.length;
+        }
+        // ==================== 匯出 Excel 功能 ====================
+        function exportToExcel() {
+            // 1. 確保 Excel 套件已成功載入
+            if (typeof XLSX === 'undefined') {
+                alert('載入 Excel 套件失敗，請檢查網路連線');
+                return;
+            }
+    
+           // 如果您有寫 toast 提示功能可以呼叫，沒有的話這行會被忽略
+           if(typeof showToast === 'function') showToast('正在產生 Excel 報表...');
+    
+           // 2. 建立新的 Excel 活頁簿
+           const wb = XLSX.utils.book_new();
+
+           // 3. 整理陸運、海運、油單的資料陣列 (對應您的 appState)
+           const landData = appState.land.map(d => ({
+               '日期': d.date,
+               '廠商名稱': d.vendor,
+               '出發點': d.start || `${d.startCounty||''}${d.startTownship||''}${d.startDetail||''}`,
+               '目的地': d.end || `${d.endCounty||''}${d.endTownship||''}${d.endDetail||''}`,
+               '車型': d.vehicle,
+               '載重 (噸)': d.weight,
+               '精準里程 (km)': d.km,
+               '碳排放 (kg CO₂e)': d.co2
+           }));
+    
+           const seaData = appState.sea.map(d => ({
+               '日期': d.date,
+               '航商/代理': d.shipper,
+               '出發港': (typeof PORT_NAME_MAP !== 'undefined' && PORT_NAME_MAP[d.origin]) ? PORT_NAME_MAP[d.origin] : d.origin,
+               '抵達港': (typeof PORT_NAME_MAP !== 'undefined' && PORT_NAME_MAP[d.dest]) ? PORT_NAME_MAP[d.dest] : d.dest,
+               '貨量(噸)': d.weight,
+               '貨櫃(備註)': d.container,
+               '航程里程(km)': d.km,
+               '碳排放 (kg CO₂e)': d.co2
+           }));
+
+           const fleetData = appState.fleet.map(d => ({
+               '月份': d.month,
+               '車牌/編號': d.plate,
+               '油種': d.fuelType === 'diesel' ? '柴油' : '汽油',
+               '盤查公升數 (L)': d.liters,
+               '碳排放 (kg CO₂e)': d.co2
+           }));
+
+           // 4. 將資料轉為工作表 (如果陣列是空的，就顯示「尚無資料」)
+           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(landData.length ? landData : [{'備註':'尚無陸運資料'}]), "陸運紀錄");
+           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(seaData.length ? seaData : [{'備註':'尚無海運資料'}]), "海運紀錄");
+           XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fleetData.length ? fleetData : [{'備註':'尚無油單資料'}]), "油單紀錄");
+
+           // 5. 產生當天日期作為檔名後綴 (例如: 20260727)
+           const dateObj = new Date();
+           const dateStr = `${dateObj.getFullYear()}${(dateObj.getMonth()+1).toString().padStart(2,'0')}${dateObj.getDate().toString().padStart(2,'0')}`;
+    
+           // 6. 觸發瀏覽器下載
+           XLSX.writeFile(wb, `何鑫實業_碳盤查紀錄表_${dateStr}.xlsx`);
+    
+           if(typeof showToast === 'function') showToast('Excel 匯出成功！');
+      }
+        // Render Tables
+        function renderTables() {
+            // 1. Dashboard Recent Combined
+            const dashboardRecent = document.getElementById('dashboard-recent-tbody');
+            dashboardRecent.innerHTML = '';
+
+            let combinedList = [];
+            appState.land.forEach(l => combinedList.push({ type: '陸運', date: formatDisplayDate(l.date), rawDate: l.date, key: l.vendor, route: `${l.start} ➜ ${l.end}`, data: `${l.weight}噸 / ${l.km}km`, co2: l.co2 }));
+            appState.sea.forEach(s => combinedList.push({ type: '海運', date: formatDisplayDate(s.date), rawDate: s.date, key: s.shipper, route: `${PORT_NAME_MAP[s.origin] || s.origin} ➜ ${PORT_NAME_MAP[s.dest] || s.dest}`, data: `${s.weight}噸 / ${s.km}km`, co2: s.co2 }));
+            appState.fleet.forEach(f => combinedList.push({ type: '公務車/油耗', date: formatDisplayMonth(f.month), rawDate: f.month, key: f.plate, route: `發票盤查 (${f.fuelType === 'diesel' ? '柴油' : '汽油'})`, data: `${f.liters} L`, co2: f.co2 }));
+
+            // Sort by Date desc (using rawDate to ensure correct chronological sorting)
+            combinedList.sort((a,b) => new Date(b.rawDate) - new Date(a.rawDate));
+
+            const topTen = combinedList.slice(0, 10);
+            if (topTen.length === 0) {
+                dashboardRecent.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">目前雲端無任何盤查紀錄。</td></tr>`;
+            } else {
+                topTen.forEach(item => {
+                    let typeBadge = '';
+                    if (item.type === '陸運') {
+                        typeBadge = '<span class="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-full border border-emerald-200">陸運配送</span>';
+                    } else if (item.type === '海運') {
+                        typeBadge = '<span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200">海運進口</span>';
+                    } else {
+                        typeBadge = '<span class="px-2 py-1 bg-amber-50 text-amber-700 text-xs rounded-full border border-amber-200">油單盤查</span>';
+                    }
+
+                    dashboardRecent.innerHTML += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50/50 transition">
+                            <td class="p-3 font-medium text-slate-600">${item.date}</td>
+                            <td class="p-3">${typeBadge}</td>
+                            <td class="p-3 text-slate-700 font-bold">${item.key}</td>
+                            <td class="p-3 text-slate-500 max-w-xs truncate" title="${item.route}">${item.route}</td>
+                            <td class="p-3 text-slate-500 font-mono text-xs">${item.data}</td>
+                            <td class="p-3 text-right font-bold text-eva-darkgreen">${item.co2.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // 2. Land Table
+            const landTbody = document.getElementById('land-tbody');
+            landTbody.innerHTML = '';
+            if (appState.land.length === 0) {
+                landTbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">目前尚無陸運配送數據。</td></tr>`;
+            } else {
+                appState.land.forEach(l => {
+                    const carText = l.vehicle === 'diesel_large_truck' ? '大貨車' : l.vehicle === 'diesel_small_truck' ? '小貨車' : '廂型車';
+                    landTbody.innerHTML += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition text-xs">
+                            <td class="p-3 font-semibold text-slate-600">${formatDisplayDate(l.date)}</td>
+                            <td class="p-3 font-bold">${l.vendor}</td>
+                            <td class="p-3 text-slate-500 max-w-xxs truncate" title="${l.start}">${l.start}</td>
+                            <td class="p-3 text-slate-500 max-w-xxs truncate" title="${l.end}">${l.end}</td>
+                            <td class="p-3 text-slate-500">${carText}</td>
+                            <td class="p-3 text-slate-600 font-mono">${l.weight}</td>
+                            <td class="p-3 font-bold text-slate-600 font-mono">${l.km}</td>
+                            <td class="p-3 font-extrabold text-eva-green font-mono">${parseFloat(l.co2).toLocaleString()}</td>
+                            <td class="p-3 text-center">
+                                <button onclick="deleteFromCloud('land', '${l.id}')" class="text-rose-500 hover:text-rose-700 font-bold transition text-xs flex items-center justify-center mx-auto gap-1">
+                                    <i class="fa-regular fa-trash-can"></i> 刪除
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // 3. Sea Table
+            const seaTbody = document.getElementById('sea-tbody');
+            seaTbody.innerHTML = '';
+            if (appState.sea.length === 0) {
+                seaTbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">目前尚無海運配送數據。</td></tr>`;
+            } else {
+                appState.sea.forEach(s => {
+                    seaTbody.innerHTML += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition text-xs">
+                            <td class="p-3 font-semibold text-slate-600">${formatDisplayDate(s.date)}</td>
+                            <td class="p-3 font-bold">${s.shipper}</td>
+                            <td class="p-3 text-emerald-800 font-medium">${PORT_NAME_MAP[s.origin] || s.origin}</td>
+                            <td class="p-3 text-amber-800 font-medium">${PORT_NAME_MAP[s.dest] || s.dest}</td>
+                            <td class="p-3 text-slate-600 font-mono">${s.weight}</td>
+                            <td class="p-3 text-slate-400">${s.container}</td>
+                            <td class="p-3 font-bold text-slate-600 font-mono">${s.km}</td>
+                            <td class="p-3 font-extrabold text-blue-600 font-mono">${parseFloat(s.co2).toLocaleString()}</td>
+                            <td class="p-3 text-center">
+                                <button onclick="deleteFromCloud('sea', '${s.id}')" class="text-rose-500 hover:text-rose-700 font-bold transition text-xs flex items-center justify-center mx-auto gap-1">
+                                    <i class="fa-regular fa-trash-can"></i> 刪除
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // 4. Fleet Table
+            const fleetTbody = document.getElementById('fleet-tbody');
+            fleetTbody.innerHTML = '';
+            if (appState.fleet.length === 0) {
+                fleetTbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">目前尚無車輛油單數據。</td></tr>`;
+            } else {
+                appState.fleet.forEach(f => {
+                    const fuelLabel = f.fuelType === 'diesel' ? '<span class="text-amber-800 font-semibold">柴油</span>' : '<span class="text-blue-800 font-semibold">汽油</span>';
+                    fleetTbody.innerHTML += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition text-xs">
+                            <td class="p-3 font-semibold text-slate-600">${formatDisplayMonth(f.month)}</td>
+                            <td class="p-3 font-bold">${f.plate}</td>
+                            <td class="p-3">${fuelLabel}</td>
+                            <td class="p-3 font-bold text-slate-600 font-mono">${f.liters} L</td>
+                            <td class="p-3 font-extrabold text-amber-600 font-mono">${parseFloat(f.co2).toLocaleString()}</td>
+                            <td class="p-3 text-center">
+                                <button onclick="deleteFromCloud('fleet', '${f.id}')" class="text-rose-500 hover:text-rose-700 font-bold transition text-xs flex items-center justify-center mx-auto gap-1">
+                                    <i class="fa-regular fa-trash-can"></i> 刪除
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        // ==================== CHART GENERATION ENGINE (CHART.JS) ====================
+        
+        function renderCharts() {
+            // Calculation
+            let landTotal = 0;
+            appState.land.forEach(l => landTotal += parseFloat(l.co2 || 0));
+            let seaTotal = 0;
+            appState.sea.forEach(s => seaTotal += parseFloat(s.co2 || 0));
+            let fleetTotal = 0;
+            appState.fleet.forEach(f => fleetTotal += parseFloat(f.co2 || 0));
+
+            // Chart 1: Pie Source Proportions
+            if (pieChartInstance) {
+                pieChartInstance.destroy();
+            }
+
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            
+            if (landTotal === 0 && seaTotal === 0 && fleetTotal === 0) {
+                // If clean slate
+                pieChartInstance = new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['無盤查資料'],
+                        datasets: [{ data: [1], backgroundColor: ['#E2E8F0'] }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            } else {
+                pieChartInstance = new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['陸運配送', '海運進口', '公務車與油單'],
+                        datasets: [{
+                            data: [landTotal, seaTotal, fleetTotal],
+                            backgroundColor: ['#036635', '#2563EB', '#D97706'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { font: { family: 'Noto Sans TC', size: 12 }, padding: 15 }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const val = context.raw;
+                                        const sum = landTotal + seaTotal + fleetTotal;
+                                        const pct = ((val / sum) * 100).toFixed(1);
+                                        return ` ${context.label}: ${val.toFixed(1)} kg (${pct}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
+            }
+
+            // Chart 2: Monthly Trends
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+
+            // Parse Monthly Groups
+            const monthlyDataMap = {};
+            
+            // Collect months
+            appState.land.forEach(l => {
+                const m = formatDisplayMonth(l.date); // 取台灣時區的 YYYY-MM
+                if (!monthlyDataMap[m]) monthlyDataMap[m] = { land: 0, sea: 0, fleet: 0 };
+                monthlyDataMap[m].land += parseFloat(l.co2 || 0);
+            });
+            appState.sea.forEach(s => {
+                const m = formatDisplayMonth(s.date);
+                if (!monthlyDataMap[m]) monthlyDataMap[m] = { land: 0, sea: 0, fleet: 0 };
+                monthlyDataMap[m].sea += parseFloat(s.co2 || 0);
+            });
+            appState.fleet.forEach(f => {
+                const m = formatDisplayMonth(f.month);
+                if (!monthlyDataMap[m]) monthlyDataMap[m] = { land: 0, sea: 0, fleet: 0 };
+                monthlyDataMap[m].fleet += parseFloat(f.co2 || 0);
+            });
+
+            // Sort months ascendingly
+            const sortedMonths = Object.keys(monthlyDataMap).sort();
+            
+            const landTrend = [];
+            const seaTrend = [];
+            const fleetTrend = [];
+
+            sortedMonths.forEach(m => {
+                landTrend.push(monthlyDataMap[m].land);
+                seaTrend.push(monthlyDataMap[m].sea);
+                fleetTrend.push(monthlyDataMap[m].fleet);
+            });
+
+            // Fallback display if empty
+            const labels = sortedMonths.length > 0 ? sortedMonths : ['無數據月'];
+            const lTrend = landTrend.length > 0 ? landTrend : [0];
+            const sTrend = seaTrend.length > 0 ? seaTrend : [0];
+            const fTrend = fleetTrend.length > 0 ? fleetTrend : [0];
+
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            trendChartInstance = new Chart(ctxTrend, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '陸運配送', data: lTrend, backgroundColor: '#036635', stack: 'Stack0' },
+                        { label: '海運進口', data: sTrend, backgroundColor: '#2563EB', stack: 'Stack0' },
+                        { label: '油單盤查', data: fTrend, backgroundColor: '#D97706', stack: 'Stack0' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Noto Sans TC' } } },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, grid: { color: '#F1F5F9' } }
+                    }
+                }
+            });
         }
     </script>
 </body>
