@@ -980,16 +980,16 @@ function doPost(e) {
         // Emission Factors (Based on Taiwan Ministry of Environment & GHG Protocol)
         const EMISSION_FACTORS = {
             // Land: Cargo Ton-Kilometer (t-km) factors or pure km factors
-            diesel_large_truck: 0.179, // kg CO2e / t-km
-            diesel_small_truck: 0.281, // kg CO2e / t-km
-            gasoline_van: 0.252,        // kg CO2e / km (Independent of weight)
+            diesel_large_truck: 0.131, // kg CO2e / t-km
+            diesel_small_truck: 0.587, // kg CO2e / t-km
+            gasoline_van: 0.683,        // kg CO2e / km (Independent of weight)
             
             // Sea: Maritime Cargo (t-km)
-            sea_freight: 0.008,        // kg CO2e / t-km (Efficient container ship)
+            sea_freight: 0.016,        // kg CO2e / t-km (Efficient container ship)
             
             // Fleet: Energy fuel direct consumption
-            diesel: 2.66,              // kg CO2e / Liter
-            gasoline: 2.26             // kg CO2e / Liter
+            diesel: 3.324,              // kg CO2e / Liter
+            gasoline: 2.93             // kg CO2e / Liter
         };
 
         // Global Chart instances
