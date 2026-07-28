@@ -1056,7 +1056,7 @@ function doPost(e) {
             refreshAllData();
 
             // Set dynamic listeners for Land Location triggers to auto calculate mileage
-            ['land-start-county', 'land-start-township', 'land-end-county', 'land-end-township'].forEach(id => {
+            ['land-start-county', 'land-start-township', 'land-start-detail', 'land-end-county', 'land-end-township', 'land-end-detail'].forEach(id => {
                 document.getElementById(id).addEventListener('change', autoCalculateLandDistance);
             });
         };
@@ -1178,37 +1178,64 @@ function doPost(e) {
         }
 
         // ==================== OSRM API 精準里程計算 ====================
+        // ==================== 1. 新增地理編碼 API 轉換 (精確至村里) ====================
+        async function getCoordinates(county, town, detail) {
+            // 若未填寫詳細地址(村、里)，則退回原本的鄉鎮區預設中心座標
+            if (!detail) return TAIWAN_GEO_DB[county][town];
+
+            try {
+                // 呼叫免費的 OpenStreetMap Nominatim API 進行精確地址解析
+                const query = encodeURIComponent(`${county}${town}${detail}`);
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=tw&limit=1`);
+                const data = await res.json();
+        
+                if (data && data.length > 0) {
+                    // 成功取得村、里、巷弄級別的精確經緯度 [緯度, 經度]
+                    return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                }
+            } catch (err) {
+                console.warn("地址解析 API 連線超時，改用鄉鎮區預設座標估算", err);
+            }
+    
+            // 若找不到該村里或解析失敗，自動退回靜態資料庫防呆
+            return TAIWAN_GEO_DB[county][town];
+        }
+        // ==================== 2. 覆蓋原有的 OSRM API 精準里程計算 ====================
         async function autoCalculateLandDistance() {
             const startCounty = document.getElementById('land-start-county').value;
             const startTown = document.getElementById('land-start-township').value;
+            const startDetail = document.getElementById('land-start-detail').value.trim(); // 取得起點村、里
+    
             const endCounty = document.getElementById('land-end-county').value;
             const endTown = document.getElementById('land-end-township').value;
+            const endDetail = document.getElementById('land-end-detail').value.trim();     // 取得終點村、里
 
             if (!startCounty || !startTown || !endCounty || !endTown) return;
 
-            const startGeo = TAIWAN_GEO_DB[startCounty][startTown];
-            const endGeo = TAIWAN_GEO_DB[endCounty][endTown];
+            const previewEl = document.getElementById('land-calculated-km');
+            previewEl.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 正在定位村里座標並精算規劃中...';
+
+            // 透過 Geocoding 動態取得精確到村、里的座標
+            const startGeo = await getCoordinates(startCounty, startTown, startDetail);
+            const endGeo = await getCoordinates(endCounty, endTown, endDetail);
 
             if (!startGeo || !endGeo) return;
 
-            const previewEl = document.getElementById('land-calculated-km');
-            previewEl.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 精算規劃中...';
-
-            // Build OSRM query coordinates format: longitude,latitude;longitude,latitude
+            // 組合 OSRM API 查詢座標格式: longitude,latitude;longitude,latitude
             const coords = `${startGeo[1]},${startGeo[0]};${endGeo[1]},${endGeo[0]}`;
             const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                
+        
                 if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
                     const distanceMeters = data.routes[0].distance;
                     const distanceKm = (distanceMeters / 1000).toFixed(2);
                     previewEl.innerHTML = `<span class="text-eva-green font-bold"><i class="fa-solid fa-route"></i> 導航推薦道路路網精確里程: ${distanceKm} 公里</span>`;
                     previewEl.dataset.km = distanceKm;
                 } else {
-                    // Fallback to Haversine (straight line distance with a correction multiplier of 1.3)
+                    // 退回大圓距離演算法估算
                     const straightKm = calculateHaversineDistance(startGeo[0], startGeo[1], endGeo[0], endGeo[1]);
                     const roadEstKm = (straightKm * 1.3).toFixed(2);
                     previewEl.innerHTML = `<span class="text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i> OSRM連線超時，改採球面幾何公路估算: ${roadEstKm} 公里</span>`;
