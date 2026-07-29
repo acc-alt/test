@@ -265,9 +265,9 @@
                         <div>
                             <label class="block text-xs font-bold text-eva-darkgreen uppercase mb-2">運送載具類型</label>
                             <select id="land-vehicle" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-eva-green focus:outline-none transition text-sm">
-                                <option value="diesel_large_truck" selected>大貨車 / 聯結車 (柴油, 碳排: 0.131 kg/t-km)</option>
-                                <option value="diesel_small_truck">小貨車 / 3.5噸以下 (柴油, 碳排: 0.587 kg/t-km)</option>
-                                <option value="gasoline_van">廂型車 / 貨卡 (汽油, 碳排: 0.683 kg/km)</option>
+                                <option value="diesel_large_truck" selected>大貨車 / 聯結車 (柴油, 碳排: 0.179 kg/t-km)</option>
+                                <option value="diesel_small_truck">小貨車 / 3.5噸以下 (柴油, 碳排: 0.281 kg/t-km)</option>
+                                <option value="gasoline_van">廂型車 / 貨卡 (汽油, 碳排: 0.252 kg/km)</option>
                             </select>
                         </div>
 
@@ -507,8 +507,8 @@
                         <div>
                             <label class="block text-xs font-bold text-eva-darkgreen uppercase mb-2">燃油種類</label>
                             <select id="fleet-fuel-type" class="w-full p-3 border border-slate-200 bg-white rounded-lg focus:ring-2 focus:ring-eva-green focus:outline-none transition text-sm">
-                                <option value="diesel" selected>柴油 (Diesel, 碳排: 3.324 kg CO₂e/L)</option>
-                                <option value="gasoline">高級無鉛汽油 (Gasoline, 碳排: 2.93 kg CO₂e/L)</option>
+                                <option value="diesel" selected>柴油 (Diesel, 碳排: 2.66 kg CO₂e/L)</option>
+                                <option value="gasoline">高級無鉛汽油 (Gasoline, 碳排: 2.26 kg CO₂e/L)</option>
                             </select>
                         </div>
                         <!-- Liters -->
@@ -980,16 +980,16 @@ function doPost(e) {
         // Emission Factors (Based on Taiwan Ministry of Environment & GHG Protocol)
         const EMISSION_FACTORS = {
             // Land: Cargo Ton-Kilometer (t-km) factors or pure km factors
-            diesel_large_truck: 0.131, // kg CO2e / t-km
-            diesel_small_truck: 0.587, // kg CO2e / t-km
-            gasoline_van: 0.683,        // kg CO2e / km (Independent of weight)
+            diesel_large_truck: 0.179, // kg CO2e / t-km
+            diesel_small_truck: 0.281, // kg CO2e / t-km
+            gasoline_van: 0.252,        // kg CO2e / km (Independent of weight)
             
             // Sea: Maritime Cargo (t-km)
-            sea_freight: 0.0198        // kg CO2e / t-km (Efficient container ship)
+            sea_freight: 0.008,        // kg CO2e / t-km (Efficient container ship)
             
             // Fleet: Energy fuel direct consumption
-            diesel: 3.324,              // kg CO2e / Liter
-            gasoline: 2.93             // kg CO2e / Liter
+            diesel: 2.66,              // kg CO2e / Liter
+            gasoline: 2.26             // kg CO2e / Liter
         };
 
         // Global Chart instances
